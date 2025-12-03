@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
-import { Entity, Headline } from '@/src/types';
+import { Entity, Headline, Game } from '@/src/types';
 
 export function getPlayerEntities(): Entity[] {
   const csvPath = path.join(process.cwd(), 'src', 'data', 'player-headlines.csv');
@@ -57,4 +57,44 @@ export function getAllHeadlines(): Map<number, Headline> {
   });
   
   return headlines;
+}
+
+export function getGameEntities(): Entity[] {
+  const csvPath = path.join(process.cwd(), 'src', 'data', 'game-headlines.csv');
+  const csvContent = fs.readFileSync(csvPath, 'utf-8');
+  
+  const records = parse(csvContent, {
+    columns: true,
+    skip_empty_lines: true,
+    relax_column_count: true
+  });
+  
+  const entities: Entity[] = records.map((record: any) => {
+    // Parse the headline_ids array
+    const headlineIds = JSON.parse(record.headline_ids);
+    const datetime = record.datetime;
+    const date = new Date(datetime).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    
+    return {
+      name: `${record.away_team} @ ${record.home_team}`,
+      headlineCount: headlineIds.length,
+      matchedHeadlines: headlineIds,
+      homeTeam: record.home_team,
+      awayTeam: record.away_team,
+      date: date,
+      gameId: record.id,
+      datetime: datetime // Store for sorting
+    };
+  }).sort((a, b) => {
+    // Sort by date (newest first)
+    const dateA = new Date(a.datetime || '');
+    const dateB = new Date(b.datetime || '');
+    return dateB.getTime() - dateA.getTime();
+  });
+  
+  return entities;
 }

@@ -19,4 +19,21 @@ export interface Entity {
   name: string;
   headlineCount: number;
   matchedHeadlines: number[];
+  // Optional game-specific fields
+  homeTeam?: string;
+  awayTeam?: string;
+  date?: string;
+  gameId?: string;
+  datetime?: string;
+}
+
+export interface Game {
+  id: string;
+  homeTeam: string;
+  awayTeam: string;
+  homeTeamAbv: string;
+  awayTeamAbv: string;
+  datetime: string;
+  headlineIds: number[];
+  headlineCount: number;
 }

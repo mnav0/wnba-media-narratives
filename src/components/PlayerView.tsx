@@ -7,21 +7,26 @@ import { Entity, Headline } from '@/src/types';
 import { analyzeHeadlines, TextAnalysisResult } from '@/src/lib/textAnalysis';
 
 interface PlayerViewProps {
-  entities: Entity[];
+  playerEntities: Entity[];
+  gameEntities: Entity[];
   headlinesArray: [number, Headline][];
 }
 
-export default function PlayerView({ entities, headlinesArray }: PlayerViewProps) {
+export default function PlayerView({ playerEntities, gameEntities, headlinesArray }: PlayerViewProps) {
+  const [viewMode, setViewMode] = useState<'players' | 'games'>('players');
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [allEntityHeadlines, setAllEntityHeadlines] = useState<Headline[]>([]);
   const [filteredHeadlines, setFilteredHeadlines] = useState<Headline[]>([]);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   
+  // Get current entities based on view mode
+  const currentEntities = viewMode === 'players' ? playerEntities : gameEntities;
+  
   // Convert array back to Map
   const allHeadlines = new Map(headlinesArray);
 
-  // Get all player names for text analysis
-  const allPlayerNames = useMemo(() => entities.map(e => e.name), [entities]);
+  // Get all player names for text analysis (always use player names, even for games)
+  const allPlayerNames = useMemo(() => playerEntities.map(e => e.name), [playerEntities]);
 
   // Analyze headlines when entity is selected
   const textAnalysis: TextAnalysisResult | null = useMemo(() => {
@@ -77,11 +82,43 @@ export default function PlayerView({ entities, headlinesArray }: PlayerViewProps
           onClose={handleClose}
         />
       ) : (
-        <EntityList
-          entities={entities}
-          onEntityClick={handleEntityClick}
-          selectedEntity={selectedEntity}
-        />
+        <>
+          {/* View Toggle */}
+          <div className="flex justify-center gap-4 mb-8 pt-8">
+            <button
+              onClick={() => {
+                setViewMode('players');
+                setSelectedEntity(null);
+              }}
+              className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+                viewMode === 'players'
+                  ? 'bg-black text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Players
+            </button>
+            <button
+              onClick={() => {
+                setViewMode('games');
+                setSelectedEntity(null);
+              }}
+              className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+                viewMode === 'games'
+                  ? 'bg-black text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Games
+            </button>
+          </div>
+          
+          <EntityList
+            entities={currentEntities}
+            onEntityClick={handleEntityClick}
+            selectedEntity={selectedEntity}
+          />
+        </>
       )}
     </>
   );
