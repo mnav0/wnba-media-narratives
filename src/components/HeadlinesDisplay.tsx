@@ -11,6 +11,7 @@ interface HeadlinesDisplayProps {
   activeFilter: string | null;
   onWordClick: (word: string) => void;
   onClose: () => void;
+  hideHeader?: boolean; // Optional prop to hide header when used in tabs
 }
 
 export default function HeadlinesDisplay({ 
@@ -19,7 +20,8 @@ export default function HeadlinesDisplay({
   textAnalysis,
   activeFilter,
   onWordClick,
-  onClose 
+  onClose,
+  hideHeader = false
 }: HeadlinesDisplayProps) {
   // Use fixed sizes and opacities to avoid hydration issues
   // Vary based on index for visual interest
@@ -43,11 +45,12 @@ export default function HeadlinesDisplay({
   }, [headlines]);
 
   return (
-    <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
-      <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-200 z-10">
-        <div className="p-4 flex justify-between items-start">
-          <div className="flex-1">
-            <h1 className="text-xl md:text-2xl font-bold mb-2">{entityName}</h1>
+    <div className={hideHeader ? "" : "fixed inset-0 bg-white z-50 overflow-y-auto"}>
+      {!hideHeader && (
+        <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-200 z-10">
+          <div className="p-4 flex justify-between items-start">
+            <div className="flex-1">
+              <h1 className="text-xl md:text-2xl font-bold mb-2">{entityName}</h1>
             
             {textAnalysis && (
               <div className="space-y-3 text-sm">
@@ -208,6 +211,7 @@ export default function HeadlinesDisplay({
           </button>
         </div>
       </div>
+      )}
       
       <div className="p-4 md:p-8">
         <div className="columns-1 md:columns-2 lg:columns-3 gap-4 md:gap-6">

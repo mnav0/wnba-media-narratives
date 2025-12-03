@@ -3,21 +3,24 @@
 import { useState, useMemo } from 'react';
 import EntityList from '@/src/components/EntityList';
 import HeadlinesDisplay from '@/src/components/HeadlinesDisplay';
-import { Entity, Headline } from '@/src/types';
+import GameView from '@/src/components/GameView';
+import { Entity, Headline, GamePlaysData } from '@/src/types';
 import { analyzeHeadlines, TextAnalysisResult } from '@/src/lib/textAnalysis';
 
 interface PlayerViewProps {
   playerEntities: Entity[];
   gameEntities: Entity[];
   headlinesArray: [number, Headline][];
+  gamePlaysMap: Record<string, GamePlaysData>;
 }
 
-export default function PlayerView({ playerEntities, gameEntities, headlinesArray }: PlayerViewProps) {
+export default function PlayerView({ playerEntities, gameEntities, headlinesArray, gamePlaysMap }: PlayerViewProps) {
   const [viewMode, setViewMode] = useState<'players' | 'games'>('players');
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [allEntityHeadlines, setAllEntityHeadlines] = useState<Headline[]>([]);
   const [filteredHeadlines, setFilteredHeadlines] = useState<Headline[]>([]);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [gamePlaysData, setGamePlaysData] = useState<GamePlaysData | null>(null);
   
   // Get current entities based on view mode
   const currentEntities = viewMode === 'players' ? playerEntities : gameEntities;
@@ -45,6 +48,14 @@ export default function PlayerView({ playerEntities, gameEntities, headlinesArra
     
     setAllEntityHeadlines(entityHeadlines);
     setFilteredHeadlines(entityHeadlines);
+    
+    // Load game plays data if this is a game entity
+    if (entity.gameId) {
+      const playsData = gamePlaysMap[entity.gameId] || null;
+      setGamePlaysData(playsData);
+    } else {
+      setGamePlaysData(null);
+    }
   };
 
   const handleWordFilter = (word: string) => {
@@ -68,19 +79,34 @@ export default function PlayerView({ playerEntities, gameEntities, headlinesArra
     setAllEntityHeadlines([]);
     setFilteredHeadlines([]);
     setActiveFilter(null);
+    setGamePlaysData(null);
   };
+
+  const isGameEntity = selectedEntity?.gameId !== undefined;
 
   return (
     <>
       {selectedEntity ? (
-        <HeadlinesDisplay
-          headlines={filteredHeadlines}
-          entityName={selectedEntity.name}
-          textAnalysis={textAnalysis}
-          activeFilter={activeFilter}
-          onWordClick={handleWordFilter}
-          onClose={handleClose}
-        />
+        isGameEntity ? (
+          <GameView
+            headlines={filteredHeadlines}
+            entityName={selectedEntity.name}
+            textAnalysis={textAnalysis}
+            activeFilter={activeFilter}
+            onWordClick={handleWordFilter}
+            onClose={handleClose}
+            gamePlaysData={gamePlaysData}
+          />
+        ) : (
+          <HeadlinesDisplay
+            headlines={filteredHeadlines}
+            entityName={selectedEntity.name}
+            textAnalysis={textAnalysis}
+            activeFilter={activeFilter}
+            onWordClick={handleWordFilter}
+            onClose={handleClose}
+          />
+        )
       ) : (
         <>
           {/* View Toggle */}

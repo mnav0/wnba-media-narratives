@@ -1,5 +1,6 @@
 import PlayerView from '@/src/components/PlayerView';
-import { getPlayerEntities, getGameEntities, getAllHeadlines } from '@/src/lib/data';
+import { getPlayerEntities, getGameEntities, getAllHeadlines, getGamePlays } from '@/src/lib/data';
+import { GamePlaysData } from '@/src/types';
 
 export default function Home() {
   const playerEntities = getPlayerEntities();
@@ -8,6 +9,17 @@ export default function Home() {
   
   // Convert Map to array for serialization
   const headlinesArray = Array.from(allHeadlines.entries());
+  
+  // Pre-load game plays data for all games
+  const gamePlaysMap: Record<string, GamePlaysData> = {};
+  gameEntities.forEach(game => {
+    if (game.gameId && game.datetime) {
+      const playsData = getGamePlays(game.gameId, game.datetime);
+      if (playsData) {
+        gamePlaysMap[game.gameId] = playsData;
+      }
+    }
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -20,7 +32,8 @@ export default function Home() {
         <PlayerView 
           playerEntities={playerEntities} 
           gameEntities={gameEntities}
-          headlinesArray={headlinesArray} 
+          headlinesArray={headlinesArray}
+          gamePlaysMap={gamePlaysMap}
         />
       </main>
     </div>

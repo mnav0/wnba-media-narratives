@@ -37,3 +37,23 @@ export interface Game {
   headlineIds: number[];
   headlineCount: number;
 }
+
+export type FoulType = 'technical' | 'flagrant' | 'regular';
+
+export interface Play {
+  eventNum: string;
+  clock: string;
+  description: string;
+  teamVtmVideoUrl?: string;
+  teamHtmVideoUrl?: string;
+  foulType?: FoulType;
+  isFoul: boolean;
+}
+
+export interface GamePlaysData {
+  gameId: string;
+  plays: Play[];
+  technicalFouls: Play[];
+  flagrantFouls: Play[];
+  regularFouls: Play[];
+}
