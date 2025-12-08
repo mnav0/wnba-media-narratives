@@ -40,24 +40,23 @@ export default function VideosDisplay({
   };
   
   // Get size class based on headline count
-  // Minimum: ~10% of screen width (10 columns) - very few headlines
-  // Maximum: ~50% of screen width (2 columns) - lots of headlines
+  // Using calc() to account for gap spacing
   const getVideoSizeClass = (headlineCount: number) => {
     if (headlineCount >= 20) {
-      // Lots of headlines: 2 videos per row (50% width each)
-      return 'w-full md:w-1/2';
+      // Lots of headlines: 2 videos per row
+      return 'w-full md:w-[calc(50%-0.5rem)]';
     } else if (headlineCount >= 10) {
-      // Medium headlines: 3 videos per row (~33% width each)
-      return 'w-full md:w-1/3';
+      // Medium headlines: 3 videos per row
+      return 'w-full md:w-[calc(33.333%-0.667rem)]';
     } else if (headlineCount >= 5) {
-      // Some headlines: 4 videos per row (25% width each)
-      return 'w-1/2 md:w-1/4';
+      // Some headlines: 4 videos per row
+      return 'w-1/2 md:w-[calc(25%-0.75rem)]';
     } else if (headlineCount >= 2) {
-      // Few headlines: 6 videos per row (~16% width each)
-      return 'w-1/3 md:w-1/6';
+      // Few headlines: 6 videos per row
+      return 'w-1/3 md:w-[calc(16.666%-0.833rem)]';
     } else {
-      // Very few or no headlines: 10 videos per row (10% width each)
-      return 'w-1/4 md:w-1/10';
+      // Very few or no headlines: 10 videos per row
+      return 'w-1/4 md:w-[calc(10%-0.9rem)]';
     }
   };
   
