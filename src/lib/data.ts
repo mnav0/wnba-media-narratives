@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
-import { Entity, Headline, Game, Play, GamePlaysData, FoulType } from '@/src/types';
+import { Entity, Headline, Game, VideoData } from '@/src/types';
 
 export function getPlayerEntities(): Entity[] {
   const csvPath = path.join(process.cwd(), 'src', 'data', 'player-headlines.csv');
@@ -73,7 +73,12 @@ export function getGameEntities(): Entity[] {
     // Parse the headline_ids array
     const headlineIds = JSON.parse(record.headline_ids);
     const datetime = record.datetime;
-    const date = new Date(datetime).toLocaleDateString('en-US', {
+    
+    // Parse date as local time to avoid timezone shift
+    // Split the date string and create Date object with local timezone
+    const [year, month, day] = datetime.split('-').map(Number);
+    const localDate = new Date(year, month - 1, day); // month is 0-indexed
+    const date = localDate.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
@@ -99,95 +104,170 @@ export function getGameEntities(): Entity[] {
   return entities;
 }
 
-// Helper function to detect foul type from play description
-// TODO: This is temporary - remove when foul types are standardized in CSV
-function detectFoulType(description: string): { isFoul: boolean; foulType?: FoulType } {
-  const desc = description.toLowerCase();
-  
-  // Check for technical foul
-  if (desc.includes('t.foul') || desc.includes('technical foul')) {
-    return { isFoul: true, foulType: 'technical' };
-  }
-  
-  // Check for flagrant foul
-  if (desc.includes('flagrant.foul') || desc.includes('flagrant foul')) {
-    return { isFoul: true, foulType: 'flagrant' };
-  }
-  
-  // Check for regular fouls (but exclude free throws)
-  if ((desc.includes('foul') || desc.includes('p.foul') || desc.includes('s.foul')) && 
-      !desc.includes('free throw') && 
-      !desc.includes('technical free throw') && 
-      !desc.includes('flagrant free throw')) {
-    return { isFoul: true, foulType: 'regular' };
-  }
-  
-  return { isFoul: false };
-}
-
-export function getGamePlays(gameId: string, datetime: string): GamePlaysData | null {
-  // Construct filename from datetime and gameId
-  // Format: YYYY-MM-DD_TEAM-TEAM_GAMEID.csv
-  const date = datetime.split('T')[0]; // Get YYYY-MM-DD part
-  
-  // Try to find the CSV file in the games subdirectory
-  const dataDir = path.join(process.cwd(), 'src', 'data', 'games');
+export function getGameVideos(gameId: string): VideoData | null {
+  const csvPath = path.join(process.cwd(), 'src', 'data', 'game-videos.csv');
   
   try {
-    // List all CSV files and find one matching the game ID
-    const files = fs.readdirSync(dataDir);
-    const gameFile = files.find(f => f.includes(gameId) && f.endsWith('.csv'));
+    const csvContent = fs.readFileSync(csvPath, 'utf-8');
+    const records = parse(csvContent, {
+      columns: true,
+      skip_empty_lines: true,
+      relax_column_count: true
+    }) as any[];
     
-    if (!gameFile) {
-      console.log(`No play-by-play file found for game ${gameId}`);
+    // Find the record for this game
+    const gameRecord: any = records.find((record: any) => record.game_id === gameId);
+    
+    if (!gameRecord || !gameRecord.players) {
       return null;
     }
     
-    const csvPath = path.join(dataDir, gameFile);
-    const csvContent = fs.readFileSync(csvPath, 'utf-8');
+    // Parse the nested players dictionary from the CSV
+    // Format: {player_id: [video_urls]} - Python dict syntax
+    // Remove outer quotes that CSV parser may include
+    let playersString = gameRecord.players;
+    if (playersString.startsWith('"') && playersString.endsWith('"')) {
+      playersString = playersString.slice(1, -1);
+    }
     
+    // Convert Python dict syntax to JSON:
+    // 1. Replace single quotes with double quotes
+    // 2. Add quotes around numeric keys
+    playersString = playersString
+      .replace(/'/g, '"')
+      .replace(/(\{|,\s*)(\d+):/g, '$1"$2":');
+    
+    const playersData = JSON.parse(playersString);
+    
+    // Extract all videos with their player IDs
+    const videos: any[] = [];
+    
+    Object.entries(playersData).forEach(([playerId, videoUrls]: [string, any]) => {
+      (videoUrls as string[]).forEach((url: string) => {
+        videos.push({
+          videoUrl: url,
+          playDescription: '', // Game videos don't have play descriptions in the CSV
+          gameId: gameId,
+          playerId: playerId
+        });
+      });
+    });
+    
+    return {
+      videos,
+      videoCount: videos.length
+    };
+  } catch (error) {
+    // Silently return null for games without videos - this is expected
+    return null;
+  }
+}
+
+export function getPlayerVideos(playerName: string): VideoData | null {
+  const csvPath = path.join(process.cwd(), 'src', 'data', 'player-videos.csv');
+  
+  try {
+    const csvContent = fs.readFileSync(csvPath, 'utf-8');
+    const records = parse(csvContent, {
+      columns: true,
+      skip_empty_lines: true,
+      relax_column_count: true
+    }) as any[];
+    
+    // Find the record for this player
+    const playerRecord: any = records.find((record: any) => 
+      record.full_name && record.full_name.toLowerCase() === playerName.toLowerCase()
+    );
+    
+    if (!playerRecord || !playerRecord.games) {
+      return null;
+    }
+    
+    // Parse the nested games dictionary from the CSV
+    // Format: {game_id: [video_urls]} - Python dict syntax
+    // Remove outer quotes that CSV parser may include
+    let gamesString = playerRecord.games;
+    if (gamesString.startsWith('"') && gamesString.endsWith('"')) {
+      gamesString = gamesString.slice(1, -1);
+    }
+    
+    // Convert Python dict syntax to JSON:
+    // 1. Replace single quotes with double quotes
+    // 2. Add quotes around numeric keys
+    gamesString = gamesString
+      .replace(/'/g, '"')
+      .replace(/(\{|,\s*)(\d+):/g, '$1"$2":');
+    
+    const gamesData = JSON.parse(gamesString);
+    
+    // Extract all videos with their game IDs
+    const videos: any[] = [];
+    
+    Object.entries(gamesData).forEach(([gameId, videoUrls]: [string, any]) => {
+      (videoUrls as string[]).forEach((url: string) => {
+        videos.push({
+          videoUrl: url,
+          playDescription: '', // Player videos don't have play descriptions in the CSV
+          gameId: gameId,
+          playerId: playerRecord.player_id
+        });
+      });
+    });
+    
+    return {
+      videos,
+      videoCount: videos.length
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+// Get all game headline counts as a map
+export function getGameHeadlineCounts(): Map<string, number> {
+  const csvPath = path.join(process.cwd(), 'src', 'data', 'game-headlines.csv');
+  
+  try {
+    const csvContent = fs.readFileSync(csvPath, 'utf-8');
     const records = parse(csvContent, {
       columns: true,
       skip_empty_lines: true,
       relax_column_count: true
     });
     
-    const plays: Play[] = records.map((record: any) => {
-      // Get description from either team column (one will have the play description)
-      const description = record['play-team-vtm'] || record['play-team-htm'] || '';
-      const { isFoul, foulType } = detectFoulType(description);
-      
-      // Get video URLs from CSV columns (empty string means no video available)
-      const recordVtmVideo = record['play-team-vtm-video-url'];
-      const recordHtmVideo = record['play-team-htm-video-url'];
-      
-      return {
-        eventNum: record[''] || '',
-        clock: record['time'] || '',
-        description: description,
-        teamVtmVideoUrl: isFoul ? recordVtmVideo : undefined,
-        teamHtmVideoUrl: isFoul ? recordHtmVideo : undefined,
-        foulType: foulType,
-        isFoul: isFoul
-      };
+    const headlineCounts = new Map<string, number>();
+    
+    records.forEach((record: any) => {
+      headlineCounts.set(record.id, parseInt(record.headline_count) || 0);
     });
     
-    // Filter and categorize fouls
-    // Sort by severity: flagrant first, then technical, then regular
-    const allFouls = plays.filter(p => p.isFoul);
-    const flagrantFouls = allFouls.filter(p => p.foulType === 'flagrant');
-    const technicalFouls = allFouls.filter(p => p.foulType === 'technical');
-    const regularFouls = allFouls.filter(p => p.foulType === 'regular');
-    
-    return {
-      gameId,
-      plays,
-      technicalFouls,
-      flagrantFouls,
-      regularFouls
-    };
+    return headlineCounts;
   } catch (error) {
-    console.error(`Error loading game plays for ${gameId}:`, error);
-    return null;
+    return new Map();
+  }
+}
+
+// Get all player headline counts as a map
+export function getPlayerHeadlineCounts(): Map<string, number> {
+  const csvPath = path.join(process.cwd(), 'src', 'data', 'player-headlines.csv');
+  
+  try {
+    const csvContent = fs.readFileSync(csvPath, 'utf-8');
+    const records = parse(csvContent, {
+      columns: true,
+      skip_empty_lines: true,
+      relax_column_count: true
+    });
+    
+    const headlineCounts = new Map<string, number>();
+    
+    records.forEach((record: any) => {
+      // Use player_id as the key for consistency
+      headlineCounts.set(record.id, parseInt(record.headlines_count) || 0);
+    });
+    
+    return headlineCounts;
+  } catch (error) {
+    return new Map();
   }
 }

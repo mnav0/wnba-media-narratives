@@ -57,3 +57,15 @@ export interface GamePlaysData {
   flagrantFouls: Play[];
   regularFouls: Play[];
 }
+
+export interface Video {
+  videoUrl: string;
+  playDescription: string;
+  gameId: string;
+  playerId?: string;
+}
+
+export interface VideoData {
+  videos: Video[];
+  videoCount: number;
+}

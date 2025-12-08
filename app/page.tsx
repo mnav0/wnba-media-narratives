@@ -1,6 +1,14 @@
 import PlayerView from '@/src/components/PlayerView';
-import { getPlayerEntities, getGameEntities, getAllHeadlines, getGamePlays } from '@/src/lib/data';
-import { GamePlaysData } from '@/src/types';
+import { 
+  getPlayerEntities, 
+  getGameEntities, 
+  getAllHeadlines, 
+  getGameVideos, 
+  getPlayerVideos,
+  getGameHeadlineCounts,
+  getPlayerHeadlineCounts
+} from '@/src/lib/data';
+import { VideoData } from '@/src/types';
 
 export default function Home() {
   const playerEntities = getPlayerEntities();
@@ -10,16 +18,33 @@ export default function Home() {
   // Convert Map to array for serialization
   const headlinesArray = Array.from(allHeadlines.entries());
   
-  // Pre-load game plays data for all games
-  const gamePlaysMap: Record<string, GamePlaysData> = {};
+  // Pre-load game videos data for all games
+  const gameVideosMap: Record<string, VideoData> = {};
   gameEntities.forEach(game => {
-    if (game.gameId && game.datetime) {
-      const playsData = getGamePlays(game.gameId, game.datetime);
-      if (playsData) {
-        gamePlaysMap[game.gameId] = playsData;
+    if (game.gameId) {
+      const videosData = getGameVideos(game.gameId);
+      if (videosData) {
+        gameVideosMap[game.gameId] = videosData;
       }
     }
   });
+  
+  // Pre-load player videos data for all players
+  const playerVideosMap: Record<string, VideoData> = {};
+  playerEntities.forEach(player => {
+    const videosData = getPlayerVideos(player.name);
+    if (videosData) {
+      playerVideosMap[player.name] = videosData;
+    }
+  });
+  
+  // Load headline count maps for video scaling
+  const gameHeadlineCounts = getGameHeadlineCounts();
+  const playerHeadlineCounts = getPlayerHeadlineCounts();
+  
+  // Convert Maps to plain objects for client component serialization
+  const gameHeadlineCountsObj = Object.fromEntries(gameHeadlineCounts);
+  const playerHeadlineCountsObj = Object.fromEntries(playerHeadlineCounts);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -33,7 +58,10 @@ export default function Home() {
           playerEntities={playerEntities} 
           gameEntities={gameEntities}
           headlinesArray={headlinesArray}
-          gamePlaysMap={gamePlaysMap}
+          gameVideosMap={gameVideosMap}
+          playerVideosMap={playerVideosMap}
+          gameHeadlineCounts={gameHeadlineCountsObj}
+          playerHeadlineCounts={playerHeadlineCountsObj}
         />
       </main>
     </div>
