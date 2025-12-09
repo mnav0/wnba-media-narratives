@@ -31,6 +31,8 @@ export default function PlayerView({
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [allEntityHeadlines, setAllEntityHeadlines] = useState<Headline[]>([]);
   const [filteredHeadlines, setFilteredHeadlines] = useState<Headline[]>([]);
+  const [headlineIds, setHeadlineIds] = useState<number[]>([]);
+  const [filteredHeadlineIds, setFilteredHeadlineIds] = useState<number[]>([]);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'headlines' | 'videos'>('headlines');
   const [videoData, setVideoData] = useState<VideoData | null>(null);
@@ -43,6 +45,33 @@ export default function PlayerView({
   
   // Convert array back to Map
   const allHeadlines = new Map(headlinesArray);
+
+  // Create date-based game headline count lookup
+  const gameDateHeadlineCounts = useMemo(() => {
+    const dateMap: Record<string, number> = {};
+    gameEntities.forEach(game => {
+      if (game.datetime) {
+        // Use the datetime directly as key (should be YYYY-MM-DD format)
+        dateMap[game.datetime] = game.headlineCount;
+      }
+    });
+    return dateMap;
+  }, [gameEntities]);
+
+  // Create headline ID to max player headline count lookup
+  // For game views, we want to scale headlines by the prominence of associated players
+  const headlineToPlayerCounts = useMemo(() => {
+    const map: Record<number, number> = {};
+    playerEntities.forEach(player => {
+      player.matchedHeadlines.forEach(headlineId => {
+        // Store the max player headline count for each headline
+        if (!map[headlineId] || player.headlineCount > map[headlineId]) {
+          map[headlineId] = player.headlineCount;
+        }
+      });
+    });
+    return map;
+  }, [playerEntities]);
 
   // Get all player names for text analysis (always use player names, even for games)
   const allPlayerNames = useMemo(() => playerEntities.map(e => e.name), [playerEntities]);
@@ -58,13 +87,22 @@ export default function PlayerView({
     setActiveFilter(null);
     setActiveTab('headlines');
     
-    // Get all headlines for this entity
-    const entityHeadlines: Headline[] = entity.matchedHeadlines
-      .map(id => allHeadlines.get(id))
-      .filter((h): h is Headline => h !== undefined);
+    // Get all headlines for this entity, keeping track of IDs
+    const validHeadlines: Headline[] = [];
+    const validIds: number[] = [];
     
-    setAllEntityHeadlines(entityHeadlines);
-    setFilteredHeadlines(entityHeadlines);
+    entity.matchedHeadlines.forEach(id => {
+      const headline = allHeadlines.get(id);
+      if (headline) {
+        validHeadlines.push(headline);
+        validIds.push(id);
+      }
+    });
+    
+    setAllEntityHeadlines(validHeadlines);
+    setFilteredHeadlines(validHeadlines);
+    setHeadlineIds(validIds);
+    setFilteredHeadlineIds(validIds);
     
     // Load video data based on entity type
     if (entity.gameId) {
@@ -81,14 +119,23 @@ export default function PlayerView({
       // Remove filter
       setActiveFilter(null);
       setFilteredHeadlines(allEntityHeadlines);
+      setFilteredHeadlineIds(headlineIds);
     } else {
       // Apply filter
       setActiveFilter(word);
-      const filtered = allEntityHeadlines.filter(h => {
+      const filtered: Headline[] = [];
+      const filteredIds: number[] = [];
+      
+      allEntityHeadlines.forEach((h, index) => {
         const text = `${h.headline} ${h.summary || ''}`.toLowerCase();
-        return text.includes(word.toLowerCase());
+        if (text.includes(word.toLowerCase())) {
+          filtered.push(h);
+          filteredIds.push(headlineIds[index]);
+        }
       });
+      
       setFilteredHeadlines(filtered);
+      setFilteredHeadlineIds(filteredIds);
     }
   };
 
@@ -96,6 +143,8 @@ export default function PlayerView({
     setSelectedEntity(null);
     setAllEntityHeadlines([]);
     setFilteredHeadlines([]);
+    setHeadlineIds([]);
+    setFilteredHeadlineIds([]);
     setActiveFilter(null);
     setActiveTab('headlines');
     setVideoData(null);
@@ -107,7 +156,7 @@ export default function PlayerView({
         <div className="fixed inset-0 bg-[#f5f1e8] z-50 overflow-y-auto">
           {/* Header with tabs */}
           <div className="sticky top-0 bg-[#f5f1e8]/95 backdrop-blur border-b border-black z-10">
-            <div className="p-4 flex justify-between items-center">
+            <div className="px-4 md:px-8 py-4 flex justify-between items-center">
               <div className="flex items-center gap-6">
                 <h1 className="text-xl font-serif italic font-bold">{selectedEntity.name}</h1>
                 
@@ -152,7 +201,7 @@ export default function PlayerView({
             <>
               {/* Show text analysis in the tab area */}
               {textAnalysis && (
-                <div className="px-4 py-4 border-b border-black bg-[#f5f1e8]">
+                <div className="px-4 md:px-8 py-4 border-b border-black bg-[#f5f1e8]">
                   <div className="space-y-3 text-sm">
                     <p className="text-black/70">
                       {textAnalysis.totalHeadlines} headline{textAnalysis.totalHeadlines !== 1 ? 's' : ''}
@@ -174,9 +223,11 @@ export default function PlayerView({
                               className={`px-2 py-1 border border-black text-xs transition-colors ${
                                 activeFilter === word
                                   ? 'bg-black text-white'
-                                  : 'hover:bg-black hover:text-white text-black'
+                                  : 'text-black'
                               }`}
                               style={activeFilter !== word ? { backgroundColor: 'var(--color-neutral-light)', opacity: 0.7 } : undefined}
+                              onMouseEnter={(e) => { if (activeFilter !== word) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                              onMouseLeave={(e) => { if (activeFilter !== word) e.currentTarget.style.backgroundColor = 'var(--color-neutral-light)'; }}
                             >
                               {word} ({count})
                             </button>
@@ -197,9 +248,11 @@ export default function PlayerView({
                                 className={`px-2 py-1 border border-black text-xs transition-colors ${
                                   activeFilter === word
                                     ? 'bg-black text-white'
-                                    : 'hover:bg-black hover:text-white text-black'
+                                    : 'text-black'
                                 }`}
                                 style={activeFilter !== word ? { backgroundColor: 'var(--color-adjective-light)', opacity: 0.7 } : undefined}
+                                onMouseEnter={(e) => { if (activeFilter !== word) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                onMouseLeave={(e) => { if (activeFilter !== word) e.currentTarget.style.backgroundColor = 'var(--color-adjective-light)'; }}
                               >
                                 {word} ({count})
                               </button>
@@ -219,9 +272,11 @@ export default function PlayerView({
                                 className={`px-2 py-1 border border-black text-xs transition-colors ${
                                   activeFilter === word
                                     ? 'bg-black text-white'
-                                    : 'hover:bg-black hover:text-white text-black'
+                                    : 'text-black'
                                 }`}
                                 style={activeFilter !== word ? { backgroundColor: 'var(--color-verb-light)', opacity: 0.7 } : undefined}
+                                onMouseEnter={(e) => { if (activeFilter !== word) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                onMouseLeave={(e) => { if (activeFilter !== word) e.currentTarget.style.backgroundColor = 'var(--color-verb-light)'; }}
                               >
                                 {word} ({count})
                               </button>
@@ -243,9 +298,11 @@ export default function PlayerView({
                                 className={`px-2 py-1 border border-black text-xs transition-colors ${
                                   activeFilter === word
                                     ? 'bg-black text-white'
-                                    : 'hover:bg-black hover:text-white text-black'
+                                    : 'text-black'
                                 }`}
                                 style={activeFilter !== word ? { backgroundColor: 'var(--color-positive-light)', opacity: 0.7 } : undefined}
+                                onMouseEnter={(e) => { if (activeFilter !== word) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                onMouseLeave={(e) => { if (activeFilter !== word) e.currentTarget.style.backgroundColor = 'var(--color-positive-light)'; }}
                               >
                                 {word} ({count})
                               </button>
@@ -265,9 +322,11 @@ export default function PlayerView({
                                 className={`px-2 py-1 border border-black text-xs transition-colors ${
                                   activeFilter === word
                                     ? 'bg-black text-white'
-                                    : 'hover:bg-black hover:text-white text-black'
+                                    : 'text-black'
                                 }`}
                                 style={activeFilter !== word ? { backgroundColor: 'var(--color-negative-light)', opacity: 0.7 } : undefined}
+                                onMouseEnter={(e) => { if (activeFilter !== word) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                onMouseLeave={(e) => { if (activeFilter !== word) e.currentTarget.style.backgroundColor = 'var(--color-negative-light)'; }}
                               >
                                 {word} ({count})
                               </button>
@@ -288,9 +347,11 @@ export default function PlayerView({
                               className={`px-2 py-1 border border-black text-xs transition-colors ${
                                 activeFilter === phrase
                                   ? 'bg-black text-white'
-                                  : 'hover:bg-black hover:text-white text-black'
+                                  : 'text-black'
                               }`}
                               style={activeFilter !== phrase ? { backgroundColor: 'var(--color-phrase-light)', opacity: 0.7 } : undefined}
+                              onMouseEnter={(e) => { if (activeFilter !== phrase) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                              onMouseLeave={(e) => { if (activeFilter !== phrase) e.currentTarget.style.backgroundColor = 'var(--color-phrase-light)'; }}
                             >
                               {phrase} ({count})
                             </button>
@@ -310,6 +371,10 @@ export default function PlayerView({
                 onWordClick={handleWordFilter}
                 onClose={handleClose}
                 hideHeader={true}
+                gameHeadlineCounts={gameDateHeadlineCounts}
+                headlineToPlayerCounts={headlineToPlayerCounts}
+                headlineIds={filteredHeadlineIds}
+                isGameView={viewMode === 'games'}
               />
             </>
           ) : (

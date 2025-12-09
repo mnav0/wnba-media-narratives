@@ -95,10 +95,8 @@ export function getGameEntities(): Entity[] {
       datetime: datetime // Store for sorting
     };
   }).sort((a, b) => {
-    // Sort by date (newest first)
-    const dateA = new Date(a.datetime || '');
-    const dateB = new Date(b.datetime || '');
-    return dateB.getTime() - dateA.getTime();
+    // Sort by headline count (descending) - same as players
+    return b.headlineCount - a.headlineCount;
   });
   
   return entities;

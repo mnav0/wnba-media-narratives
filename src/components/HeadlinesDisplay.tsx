@@ -12,6 +12,10 @@ interface HeadlinesDisplayProps {
   onWordClick: (word: string) => void;
   onClose: () => void;
   hideHeader?: boolean; // Optional prop to hide header when used in tabs
+  gameHeadlineCounts?: Record<string, number>; // Map of game date to headline count
+  headlineToPlayerCounts?: Record<number, number>; // Map of headline ID to max player headline count
+  headlineIds?: number[]; // Headline IDs in same order as headlines array
+  isGameView?: boolean; // True if viewing a game (scale by player counts), false for player view (scale by game counts)
 }
 
 export default function HeadlinesDisplay({ 
@@ -21,203 +25,80 @@ export default function HeadlinesDisplay({
   activeFilter,
   onWordClick,
   onClose,
-  hideHeader = false
+  hideHeader = false,
+  gameHeadlineCounts,
+  headlineToPlayerCounts,
+  headlineIds,
+  isGameView = false
 }: HeadlinesDisplayProps) {
-  // Use fixed sizes and opacities to avoid hydration issues
-  // Vary based on index for visual interest
+  // Helper function to format source names
+  const formatSource = (source: string): string => {
+    return source
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  // Helper function to get game headline count by matching dates
+  const getGameHeadlineCount = (headline: Headline): number | null => {
+    if (!gameHeadlineCounts || !headline.datetime) return null;
+    
+    // Extract just the date part (YYYY-MM-DD)
+    // Handle both "YYYY-MM-DD HH:MM:SS" and "YYYY-MM-DDTHH:MM:SS" formats
+    const headlineDate = headline.datetime.split(' ')[0].split('T')[0];
+    return gameHeadlineCounts[headlineDate] || null;
+  };
+
+  // Get font size based on game headline count (similar to video scaling)
+  // More granular sizing on the lower end for better differentiation
+  const getFontSize = (headlineCount: number | null): string => {
+    if (headlineCount === null) {
+      // No game match - use smallest
+      return '1rem';
+    }
+    
+    if (headlineCount >= 20) return '3.5rem';      // Lots of headlines
+    if (headlineCount >= 15) return '3rem';        // Many headlines
+    if (headlineCount >= 10) return '2.5rem';      // Medium-high headlines
+    if (headlineCount >= 7) return '2rem';         // Medium headlines
+    if (headlineCount >= 5) return '1.75rem';      // Some headlines
+    if (headlineCount >= 3) return '1.5rem';       // Few headlines
+    if (headlineCount >= 2) return '1.25rem';      // Very few headlines
+    return '1rem';                                  // Minimal headlines
+  };
+
+  // Use game-based or player-based sizing and opacity with randomized order
   const headlinesWithLayout = useMemo(() => {
-    return headlines.map((headline, index) => {
-      // Create variation based on index using a simple pattern
-      const variation = (index % 5) / 5; // Creates values: 0, 0.2, 0.4, 0.6, 0.8
+    // Shuffle headlines randomly, keeping track of original indices for ID lookup
+    const indexedHeadlines = headlines.map((h, i) => ({ headline: h, originalIndex: i }));
+    const shuffled = [...indexedHeadlines].sort(() => Math.random() - 0.5);
+    
+    const results = shuffled.map(({ headline, originalIndex }, index) => {
+      let headlineCount: number | null = null;
       
-      // Font sizes between 1.5rem and 4rem
-      const fontSize = 1.5 + (variation * 2.5);
+      // For game views, use player headline counts; for player views, use game headline counts
+      if (isGameView && headlineToPlayerCounts && headlineIds && headlineIds[originalIndex] !== undefined) {
+        // Get the max player headline count for this headline
+        headlineCount = headlineToPlayerCounts[headlineIds[originalIndex]] || null;
+      } else {
+        // Use game-based headline count (for player views)
+        headlineCount = getGameHeadlineCount(headline);
+      }
       
-      // Opacity between 0.7 and 1.0
-      const opacity = 0.7 + (variation * 0.3);
+      const fontSize = getFontSize(headlineCount);
       
       return {
         ...headline,
-        fontSize: `${fontSize}rem`,
-        opacity: opacity
+        fontSize,
+        formattedSource: formatSource(headline.source)
       };
     });
-  }, [headlines]);
+    
+    return results;
+  }, [headlines, gameHeadlineCounts, headlineToPlayerCounts, headlineIds, isGameView]);
 
   return (
     <div className={hideHeader ? "" : "fixed inset-0 bg-[#f5f1e8] z-50 overflow-y-auto"}>
-      {!hideHeader && (
-        <div className="sticky top-0 bg-[#f5f1e8]/95 backdrop-blur border-b border-black z-10">
-          <div className="p-4 flex justify-between items-start">
-            <div className="flex-1">
-              <h1 className="text-4xl md:text-5xl font-serif italic font-normal mb-4">{entityName}</h1>
-            
-            {textAnalysis && (
-              <div className="space-y-3 text-sm">
-                <p className="text-black/70">
-                  {textAnalysis.totalHeadlines} headline{textAnalysis.totalHeadlines !== 1 ? 's' : ''}
-                  {activeFilter && (
-                    <span className="ml-2 text-black font-semibold">
-                      (filtered by "{activeFilter}")
-                    </span>
-                  )}
-                </p>
-                
-{textAnalysis.topWords.length > 0 && (
-                  <div>
-                    <p className="text-xs uppercase text-black/50 mb-1">Most frequent words</p>
-                    <div className="flex flex-wrap gap-2">
-                      {textAnalysis.topWords.map(({ word, count }) => (
-                        <button
-                          key={word}
-                          onClick={() => onWordClick(word)}
-                          className={`px-2 py-1 border border-black text-xs transition-colors ${
-                            activeFilter === word
-                              ? 'bg-black text-white'
-                              : 'hover:bg-black hover:text-white text-black'
-                          }`}
-                          style={activeFilter !== word ? { backgroundColor: 'var(--color-neutral-light)', opacity: 0.7 } : undefined}
-                        >
-                          {word} ({count})
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {textAnalysis.topAdjectives.length > 0 && (
-                    <div>
-                      <p className="text-xs uppercase text-black/50 mb-1">Top adjectives</p>
-                      <div className="flex flex-wrap gap-2">
-                        {textAnalysis.topAdjectives.map(({ word, count }) => (
-                          <button
-                            key={word}
-                            onClick={() => onWordClick(word)}
-                            className={`px-2 py-1 border border-black text-xs transition-colors ${
-                              activeFilter === word
-                                ? 'bg-black text-white'
-                                : 'hover:bg-black hover:text-white text-black'
-                            }`}
-                            style={activeFilter !== word ? { backgroundColor: 'var(--color-adjective-light)', opacity: 0.7 } : undefined}
-                          >
-                            {word} ({count})
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {textAnalysis.topVerbs.length > 0 && (
-                    <div>
-                      <p className="text-xs uppercase text-black/50 mb-1">Top verbs</p>
-                      <div className="flex flex-wrap gap-2">
-                        {textAnalysis.topVerbs.map(({ word, count }) => (
-                          <button
-                            key={word}
-                            onClick={() => onWordClick(word)}
-                            className={`px-2 py-1 border border-black text-xs transition-colors ${
-                              activeFilter === word
-                                ? 'bg-black text-white'
-                                : 'hover:bg-black hover:text-white text-black'
-                            }`}
-                            style={activeFilter !== word ? { backgroundColor: 'var(--color-verb-light)', opacity: 0.7 } : undefined}
-                          >
-                            {word} ({count})
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {textAnalysis.topPositiveWords.length > 0 && (
-                    <div>
-                      <p className="text-xs uppercase text-black/50 mb-1">
-                        Positive language
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {textAnalysis.topPositiveWords.map(({ word, count, sentiment }) => (
-                          <button
-                            key={word}
-                            onClick={() => onWordClick(word)}
-                            className={`px-2 py-1 border border-black text-xs transition-colors ${
-                              activeFilter === word
-                                ? 'bg-black text-white'
-                                : 'hover:bg-black hover:text-white text-black'
-                            }`}
-                            style={activeFilter !== word ? { backgroundColor: 'var(--color-positive-light)', opacity: 0.7 } : undefined}
-                            title={`Sentiment: +${sentiment.toFixed(1)}`}
-                          >
-                            {word} ({count})
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {textAnalysis.topNegativeWords.length > 0 && (
-                    <div>
-                      <p className="text-xs uppercase text-black/50 mb-1">
-                        Negative language
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {textAnalysis.topNegativeWords.map(({ word, count, sentiment }) => (
-                          <button
-                            key={word}
-                            onClick={() => onWordClick(word)}
-                            className={`px-2 py-1 border border-black text-xs transition-colors ${
-                              activeFilter === word
-                                ? 'bg-black text-white'
-                                : 'hover:bg-black hover:text-white text-black'
-                            }`}
-                            style={activeFilter !== word ? { backgroundColor: 'var(--color-negative-light)', opacity: 0.7 } : undefined}
-                            title={`Sentiment: ${sentiment.toFixed(1)}`}
-                          >
-                            {word} ({count})
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                {textAnalysis.topPhrases.length > 0 && (
-                  <div>
-                    <p className="text-xs uppercase text-black/50 mb-1">Common phrases</p>
-                    <div className="flex flex-wrap gap-2">
-                      {textAnalysis.topPhrases.map(({ phrase, count }) => (
-                        <button
-                          key={phrase}
-                          onClick={() => onWordClick(phrase)}
-                          className={`px-2 py-1 border border-black text-xs transition-colors ${
-                            activeFilter === phrase
-                              ? 'bg-black text-white'
-                              : 'hover:bg-black hover:text-white text-black'
-                          }`}
-                          style={activeFilter !== phrase ? { backgroundColor: 'var(--color-phrase-light)', opacity: 0.7 } : undefined}
-                        >
-                          "{phrase}" ({count})
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          
-          <button
-            onClick={onClose}
-            className="text-3xl leading-none text-black/60 hover:text-black transition-colors px-2 ml-4"
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </div>
-      </div>
-      )}
       
       <div className="p-4 md:p-8">
         <div className="columns-1 md:columns-2 lg:columns-3 gap-4 md:gap-6">
@@ -227,10 +108,7 @@ export default function HeadlinesDisplay({
               href={item.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="block mb-4 md:mb-6 break-inside-avoid hover:opacity-100 transition-opacity"
-              style={{
-                opacity: item.opacity
-              }}
+              className="block mb-4 md:mb-6 break-inside-avoid hover:opacity-60 transition-opacity"
             >
               <h2 
                 className="font-serif leading-tight text-black hover:text-black/80 transition-colors"
@@ -246,8 +124,8 @@ export default function HeadlinesDisplay({
               )}
               
               <div className="flex flex-wrap gap-2 text-xs text-black/50 mt-2">
-                {item.source && (
-                  <span className="font-medium">{item.source}</span>
+                {item.formattedSource && (
+                  <span className="font-medium">{item.formattedSource}</span>
                 )}
                 {item.datetime && (
                   <span>{new Date(item.datetime).toLocaleDateString()}</span>

@@ -61,7 +61,7 @@ export default function EntityList({ entities, onEntityClick, selectedEntity, cu
           <div 
             key={rowIndex}
             className="flex justify-start gap-4"
-            style={{ height: '175px' }}
+            style={{ height: '185px' }}
           >
             {row.map((entity, cellIndex) => 
               entity ? (
@@ -75,28 +75,29 @@ export default function EntityList({ entities, onEntityClick, selectedEntity, cu
                     ${selectedEntity?.name === entity.name ? 'bg-black text-white' : 'bg-[#f5f1e8]'}
                   `}
                   style={{ 
-                    width: '225px',
-                    minWidth: '225px',
-                    height: '175px'
+                    width: '250px',
+                    minWidth: '250px',
+                    height: '185px'
                   }}
                 >
                   {isGame(entity) ? (
                     <>
                       <p className="text-sm mb-2">
                         {entity.headlineCount} {entity.headlineCount === 1 ? 'headline' : 'headlines'}
+                        {entity.date && (
+                          <span className="text-xs opacity-40 pl-2 pr-1">|</span>
+                        )}
+                        {entity.date && (
+                          <span className="text-xs opacity-40">{entity.date}</span>
+                        )}
                       </p>
                       <div className="text-xl font-serif italic mb-2">
                         {entity.awayTeam}
                       </div>
                       <div className="border-b border-black/30 mb-2"></div>
-                      <div className="text-xl font-serif italic mb-2">
+                      <div className="text-xl font-serif italic">
                         {entity.homeTeam}
                       </div>
-                      {entity.date && (
-                        <p className="text-xs opacity-40">
-                          {entity.date}
-                        </p>
-                      )}
                     </>
                   ) : (
                     <>

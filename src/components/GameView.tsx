@@ -14,6 +14,8 @@ interface GameViewProps {
   onWordClick: (word: string) => void;
   onClose: () => void;
   gamePlaysData: GamePlaysData | null;
+  gameHeadlineCounts?: Record<string, number>;
+  headlineToPlayerCounts?: Record<number, number>;
 }
 
 export default function GameView({ 
@@ -23,7 +25,9 @@ export default function GameView({
   activeFilter,
   onWordClick,
   onClose,
-  gamePlaysData
+  gamePlaysData,
+  gameHeadlineCounts,
+  headlineToPlayerCounts
 }: GameViewProps) {
   const [activeTab, setActiveTab] = useState<'headlines' | 'plays'>('headlines');
   
@@ -31,7 +35,7 @@ export default function GameView({
     <div className="fixed inset-0 bg-[#f5f1e8] z-50 overflow-y-auto">
       {/* Header with tabs */}
       <div className="sticky top-0 bg-[#f5f1e8]/95 backdrop-blur border-b border-black z-10">
-        <div className="p-4 flex justify-between items-center">
+        <div className="px-4 md:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-6">
             <h1 className="text-xl font-serif italic font-bold">{entityName}</h1>
             
@@ -81,6 +85,9 @@ export default function GameView({
           onWordClick={onWordClick}
           onClose={onClose}
           hideHeader={true}
+          gameHeadlineCounts={gameHeadlineCounts}
+          headlineToPlayerCounts={headlineToPlayerCounts}
+          isGameView={true}
         />
       ) : (
         gamePlaysData && (
