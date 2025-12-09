@@ -28,48 +28,42 @@ export default function GameView({
   const [activeTab, setActiveTab] = useState<'headlines' | 'plays'>('headlines');
   
   return (
-    <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+    <div className="fixed inset-0 bg-[#f5f1e8] z-50 overflow-y-auto">
       {/* Header with tabs */}
-      <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-200 z-10">
-        <div className="p-4 flex justify-between items-start">
-          <div className="flex-1">
-            <h1 className="text-xl md:text-2xl font-bold mb-4">{entityName}</h1>
+      <div className="sticky top-0 bg-[#f5f1e8]/95 backdrop-blur border-b border-black z-10">
+        <div className="p-4 flex justify-between items-center">
+          <div className="flex items-center gap-6">
+            <h1 className="text-xl font-serif italic font-bold">{entityName}</h1>
             
-            {/* Tab Navigation */}
-            <div className="flex gap-4 border-b border-gray-200">
+            {/* Tab Navigation inline with title */}
+            <div className="flex gap-2">
               <button
                 onClick={() => setActiveTab('headlines')}
-                className={`pb-2 px-1 font-semibold transition-colors relative ${
+                className={`px-4 py-2 border border-black font-semibold transition-colors text-sm ${
                   activeTab === 'headlines'
-                    ? 'text-black'
-                    : 'text-gray-400 hover:text-gray-600'
+                    ? 'bg-black text-white'
+                    : 'bg-[#f5f1e8] text-black hover:bg-black hover:text-white'
                 }`}
               >
                 Headlines
-                {activeTab === 'headlines' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black" />
-                )}
               </button>
               
               <button
                 onClick={() => setActiveTab('plays')}
-                className={`pb-2 px-1 font-semibold transition-colors relative ${
+                className={`px-4 py-2 border border-black font-semibold transition-colors text-sm ${
                   activeTab === 'plays'
-                    ? 'text-black'
-                    : 'text-gray-400 hover:text-gray-600'
+                    ? 'bg-black text-white'
+                    : 'bg-[#f5f1e8] text-black hover:bg-black hover:text-white'
                 }`}
               >
                 Game Plays
-                {activeTab === 'plays' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black" />
-                )}
               </button>
             </div>
           </div>
           
           <button
             onClick={onClose}
-            className="text-3xl leading-none hover:text-gray-600 transition-colors px-2 ml-4"
+            className="text-3xl leading-none text-black/60 hover:text-black transition-colors px-2 ml-4"
             aria-label="Close"
           >
             ×

@@ -34,9 +34,12 @@ export default function PlayerView({
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'headlines' | 'videos'>('headlines');
   const [videoData, setVideoData] = useState<VideoData | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
   
   // Get current entities based on view mode
   const currentEntities = viewMode === 'players' ? playerEntities : gameEntities;
+  const ITEMS_PER_PAGE = 15;
+  const totalPages = Math.ceil(currentEntities.length / ITEMS_PER_PAGE);
   
   // Convert array back to Map
   const allHeadlines = new Map(headlinesArray);
@@ -101,48 +104,42 @@ export default function PlayerView({
   return (
     <>
       {selectedEntity ? (
-        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+        <div className="fixed inset-0 bg-[#f5f1e8] z-50 overflow-y-auto">
           {/* Header with tabs */}
-          <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-200 z-10">
-            <div className="p-4 flex justify-between items-start">
-              <div className="flex-1">
-                <h1 className="text-xl md:text-2xl font-bold mb-4">{selectedEntity.name}</h1>
+          <div className="sticky top-0 bg-[#f5f1e8]/95 backdrop-blur border-b border-black z-10">
+            <div className="p-4 flex justify-between items-center">
+              <div className="flex items-center gap-6">
+                <h1 className="text-xl font-serif italic font-bold">{selectedEntity.name}</h1>
                 
-                {/* Tab Navigation - only show Videos tab if data exists */}
-                <div className="flex gap-4 border-b border-gray-200">
+                {/* Tab Navigation inline with title */}
+                <div className="flex gap-2">
                   <button
                     onClick={() => setActiveTab('headlines')}
-                    className={`pb-2 px-1 font-semibold transition-colors relative ${
+                    className={`px-4 py-2 border border-black font-semibold transition-colors text-sm ${
                       activeTab === 'headlines'
-                        ? 'text-black'
-                        : 'text-gray-400 hover:text-gray-600'
+                        ? 'bg-black text-white'
+                        : 'bg-[#f5f1e8] text-black hover:bg-black hover:text-white'
                     }`}
                   >
                     Headlines
-                    {activeTab === 'headlines' && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black" />
-                    )}
                   </button>
                   
                   <button
                     onClick={() => setActiveTab('videos')}
-                    className={`pb-2 px-1 font-semibold transition-colors relative ${
+                    className={`px-4 py-2 border border-black font-semibold transition-colors text-sm ${
                       activeTab === 'videos'
-                        ? 'text-black'
-                        : 'text-gray-400 hover:text-gray-600'
+                        ? 'bg-black text-white'
+                        : 'bg-[#f5f1e8] text-black hover:bg-black hover:text-white'
                     }`}
                   >
                     Videos
-                    {activeTab === 'videos' && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black" />
-                    )}
                   </button>
                 </div>
               </div>
               
               <button 
                 onClick={handleClose}
-                className="text-2xl text-gray-400 hover:text-black transition-colors ml-4"
+                className="text-2xl text-black/60 hover:text-black transition-colors"
                 aria-label="Close"
               >
                 ×
@@ -155,12 +152,12 @@ export default function PlayerView({
             <>
               {/* Show text analysis in the tab area */}
               {textAnalysis && (
-                <div className="px-4 py-4 border-b border-gray-200 bg-gray-50">
+                <div className="px-4 py-4 border-b border-black bg-[#f5f1e8]">
                   <div className="space-y-3 text-sm">
-                    <p className="text-gray-600">
+                    <p className="text-black/70">
                       {textAnalysis.totalHeadlines} headline{textAnalysis.totalHeadlines !== 1 ? 's' : ''}
                       {activeFilter && (
-                        <span className="ml-2 text-blue-600">
+                        <span className="ml-2 text-black font-semibold">
                           (filtered by "{activeFilter}")
                         </span>
                       )}
@@ -168,17 +165,18 @@ export default function PlayerView({
                     
                     {textAnalysis.topWords.length > 0 && (
                       <div>
-                        <p className="text-xs uppercase text-gray-400 mb-1">Most frequent words</p>
+                        <p className="text-xs uppercase text-black/50 mb-1">Most frequent words</p>
                         <div className="flex flex-wrap gap-2">
                           {textAnalysis.topWords.map(({ word, count }) => (
                             <button
                               key={word}
                               onClick={() => handleWordFilter(word)}
-                              className={`px-2 py-1 rounded text-xs transition-colors ${
+                              className={`px-2 py-1 border border-black text-xs transition-colors ${
                                 activeFilter === word
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                  ? 'bg-black text-white'
+                                  : 'hover:bg-black hover:text-white text-black'
                               }`}
+                              style={activeFilter !== word ? { backgroundColor: 'var(--color-neutral-light)', opacity: 0.7 } : undefined}
                             >
                               {word} ({count})
                             </button>
@@ -190,17 +188,18 @@ export default function PlayerView({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {textAnalysis.topAdjectives.length > 0 && (
                         <div>
-                          <p className="text-xs uppercase text-gray-400 mb-1">Top adjectives</p>
+                          <p className="text-xs uppercase text-black/50 mb-1">Top adjectives</p>
                           <div className="flex flex-wrap gap-2">
                             {textAnalysis.topAdjectives.map(({ word, count }) => (
                               <button
                                 key={word}
                                 onClick={() => handleWordFilter(word)}
-                                className={`px-2 py-1 rounded text-xs transition-colors ${
+                                className={`px-2 py-1 border border-black text-xs transition-colors ${
                                   activeFilter === word
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-green-50 hover:bg-green-100 text-green-700'
+                                    ? 'bg-black text-white'
+                                    : 'hover:bg-black hover:text-white text-black'
                                 }`}
+                                style={activeFilter !== word ? { backgroundColor: 'var(--color-adjective-light)', opacity: 0.7 } : undefined}
                               >
                                 {word} ({count})
                               </button>
@@ -211,17 +210,18 @@ export default function PlayerView({
                       
                       {textAnalysis.topVerbs.length > 0 && (
                         <div>
-                          <p className="text-xs uppercase text-gray-400 mb-1">Top verbs</p>
+                          <p className="text-xs uppercase text-black/50 mb-1">Top verbs</p>
                           <div className="flex flex-wrap gap-2">
                             {textAnalysis.topVerbs.map(({ word, count }) => (
                               <button
                                 key={word}
                                 onClick={() => handleWordFilter(word)}
-                                className={`px-2 py-1 rounded text-xs transition-colors ${
+                                className={`px-2 py-1 border border-black text-xs transition-colors ${
                                   activeFilter === word
-                                    ? 'bg-purple-600 text-white'
-                                    : 'bg-purple-50 hover:bg-purple-100 text-purple-700'
+                                    ? 'bg-black text-white'
+                                    : 'hover:bg-black hover:text-white text-black'
                                 }`}
+                                style={activeFilter !== word ? { backgroundColor: 'var(--color-verb-light)', opacity: 0.7 } : undefined}
                               >
                                 {word} ({count})
                               </button>
@@ -234,17 +234,18 @@ export default function PlayerView({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {textAnalysis.topPositiveWords.length > 0 && (
                         <div>
-                          <p className="text-xs uppercase text-gray-400 mb-1">Most Positive Words</p>
+                          <p className="text-xs uppercase text-black/50 mb-1">Most Positive Words</p>
                           <div className="flex flex-wrap gap-2">
                             {textAnalysis.topPositiveWords.map(({ word, count }) => (
                               <button
                                 key={word}
                                 onClick={() => handleWordFilter(word)}
-                                className={`px-2 py-1 rounded text-xs transition-colors ${
+                                className={`px-2 py-1 border border-black text-xs transition-colors ${
                                   activeFilter === word
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-green-50 hover:bg-green-100 text-green-800'
+                                    ? 'bg-black text-white'
+                                    : 'hover:bg-black hover:text-white text-black'
                                 }`}
+                                style={activeFilter !== word ? { backgroundColor: 'var(--color-positive-light)', opacity: 0.7 } : undefined}
                               >
                                 {word} ({count})
                               </button>
@@ -255,17 +256,18 @@ export default function PlayerView({
                       
                       {textAnalysis.topNegativeWords.length > 0 && (
                         <div>
-                          <p className="text-xs uppercase text-gray-400 mb-1">Most Negative Words</p>
+                          <p className="text-xs uppercase text-black/50 mb-1">Most Negative Words</p>
                           <div className="flex flex-wrap gap-2">
                             {textAnalysis.topNegativeWords.map(({ word, count }) => (
                               <button
                                 key={word}
                                 onClick={() => handleWordFilter(word)}
-                                className={`px-2 py-1 rounded text-xs transition-colors ${
+                                className={`px-2 py-1 border border-black text-xs transition-colors ${
                                   activeFilter === word
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-red-50 hover:bg-red-100 text-red-800'
+                                    ? 'bg-black text-white'
+                                    : 'hover:bg-black hover:text-white text-black'
                                 }`}
+                                style={activeFilter !== word ? { backgroundColor: 'var(--color-negative-light)', opacity: 0.7 } : undefined}
                               >
                                 {word} ({count})
                               </button>
@@ -277,17 +279,18 @@ export default function PlayerView({
                     
                     {textAnalysis.topPhrases.length > 0 && (
                       <div>
-                        <p className="text-xs uppercase text-gray-400 mb-1">Top Phrases</p>
+                        <p className="text-xs uppercase text-black/50 mb-1">Top Phrases</p>
                         <div className="flex flex-wrap gap-2">
                           {textAnalysis.topPhrases.map(({ phrase, count }) => (
                             <button
                               key={phrase}
                               onClick={() => handleWordFilter(phrase)}
-                              className={`px-2 py-1 rounded text-xs transition-colors ${
+                              className={`px-2 py-1 border border-black text-xs transition-colors ${
                                 activeFilter === phrase
-                                  ? 'bg-indigo-600 text-white'
-                                  : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'
+                                  ? 'bg-black text-white'
+                                  : 'hover:bg-black hover:text-white text-black'
                               }`}
+                              style={activeFilter !== phrase ? { backgroundColor: 'var(--color-phrase-light)', opacity: 0.7 } : undefined}
                             >
                               {phrase} ({count})
                             </button>
@@ -320,43 +323,78 @@ export default function PlayerView({
           )}
         </div>
       ) : (
-        <>
-          {/* View Toggle */}
-          <div className="flex justify-center gap-4 mb-8 pt-8">
-            <button
-              onClick={() => {
-                setViewMode('players');
-                setSelectedEntity(null);
-              }}
-              className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
-                viewMode === 'players'
-                  ? 'bg-black text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Players
-            </button>
-            <button
-              onClick={() => {
-                setViewMode('games');
-                setSelectedEntity(null);
-              }}
-              className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
-                viewMode === 'games'
-                  ? 'bg-black text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Games
-            </button>
+        <div className="relative h-screen">
+          {/* Fixed Right Side Controls */}
+          <div className="fixed top-8 right-8 z-10 flex flex-col gap-8 items-end">
+            {/* Title */}
+            <div className="text-right">
+              <h1 className="text-6xl font-bold tracking-tight">WNBA</h1>
+              <h2 className="text-5xl font-serif italic mt-1">Storylines</h2>
+            </div>
+            
+            {/* View Toggle */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setViewMode('players');
+                  setSelectedEntity(null);
+                  setCurrentPage(0);
+                }}
+                className={`px-4 py-2 border border-black font-semibold transition-colors text-sm ${
+                  viewMode === 'players'
+                    ? 'bg-black text-white'
+                    : 'bg-[#f5f1e8] text-black hover:bg-black hover:text-white'
+                }`}
+              >
+                Players
+              </button>
+              <button
+                onClick={() => {
+                  setViewMode('games');
+                  setSelectedEntity(null);
+                  setCurrentPage(0);
+                }}
+                className={`px-4 py-2 border border-black font-semibold transition-colors text-sm ${
+                  viewMode === 'games'
+                    ? 'bg-black text-white'
+                    : 'bg-[#f5f1e8] text-black hover:bg-black hover:text-white'
+                }`}
+              >
+                Games
+              </button>
+            </div>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                  disabled={currentPage === 0}
+                  className="px-4 py-2 border border-black bg-[#f5f1e8] hover:bg-black hover:text-white disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-[#f5f1e8] disabled:hover:text-black transition-colors text-sm"
+                >
+                  ←
+                </button>
+                <span className="text-sm">
+                  Page {currentPage + 1} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                  disabled={currentPage === totalPages - 1}
+                  className="px-4 py-2 border border-black bg-[#f5f1e8] hover:bg-black hover:text-white disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-[#f5f1e8] disabled:hover:text-black transition-colors text-sm"
+                >
+                  →
+                </button>
+              </div>
+            )}
           </div>
           
           <EntityList
             entities={currentEntities}
             onEntityClick={handleEntityClick}
             selectedEntity={selectedEntity}
+            currentPage={currentPage}
           />
-        </>
+        </div>
       )}
     </>
   );

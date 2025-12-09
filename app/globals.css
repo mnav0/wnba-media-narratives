@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f1e8;
+  --foreground: #000000;
 }
 
 @theme inline {
@@ -11,6 +11,14 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: "Georgia", "Times New Roman", "serif";
+
+  /* Custom colors for word categories */
+  --color-positive-light: #dcfce7; /* Light green for positive words */
+  --color-negative-light: #fee2e2; /* Light red for negative words */
+  --color-phrase-light: #dbeafe; /* Light blue for common phrases */
+  --color-adjective-light: #fef3c7; /* Light yellow for adjectives */
+  --color-verb-light: #e9d5ff; /* Light purple for verbs */
+  --color-neutral-light: #f3f4f6; /* Light gray for most frequent words */
 }
 
 body {

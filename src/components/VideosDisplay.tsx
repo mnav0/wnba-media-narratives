@@ -21,7 +21,7 @@ export default function VideosDisplay({
   if (!videoData || videoData.videoCount === 0) {
     return (
       <div className="p-4 md:p-8">
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-black/60">
           <p className="text-lg">No foul videos available for {entityName}.</p>
         </div>
       </div>
@@ -86,7 +86,7 @@ export default function VideosDisplay({
                   Your browser does not support the video tag.
                 </video>
                 {video.playDescription && (
-                  <div className="mt-2 text-xs md:text-sm text-gray-600">
+                  <div className="mt-2 text-xs md:text-sm text-black/70">
                     {video.playDescription}
                   </div>
                 )}

@@ -47,13 +47,8 @@ export default function Home() {
   const playerHeadlineCountsObj = Object.fromEntries(playerHeadlineCounts);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 p-6">
-        <h1 className="text-3xl font-bold text-center">WNBA Media Narratives</h1>
-        <p className="text-center text-gray-600 mt-2">Explore headlines by player or game</p>
-      </header>
-      
-      <main className="py-8">
+    <div className="min-h-screen bg-[#f5f1e8]">
+      <main>
         <PlayerView 
           playerEntities={playerEntities} 
           gameEntities={gameEntities}
