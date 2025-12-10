@@ -40,7 +40,7 @@ export default function PlayerView({
   
   // Get current entities based on view mode
   const currentEntities = viewMode === 'players' ? playerEntities : gameEntities;
-  const ITEMS_PER_PAGE = 15;
+  const ITEMS_PER_PAGE = 10;
   const totalPages = Math.ceil(currentEntities.length / ITEMS_PER_PAGE);
   
   // Convert array back to Map

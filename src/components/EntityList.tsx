@@ -12,7 +12,7 @@ interface EntityListProps {
 export default function EntityList({ entities, onEntityClick, selectedEntity, currentPage }: EntityListProps) {
   const isGame = (entity: Entity) => entity.homeTeam && entity.awayTeam;
   
-  const ITEMS_PER_PAGE = 15;
+  const ITEMS_PER_PAGE = 10;
   const totalPages = Math.ceil(entities.length / ITEMS_PER_PAGE);
   
   // Get entities for current page
@@ -20,17 +20,16 @@ export default function EntityList({ entities, onEntityClick, selectedEntity, cu
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const pageEntities = entities.slice(startIndex, endIndex);
   
-  // Pyramid layout: [1, 2, 3, 4, 5] items per row = 15 total
+  // Pyramid layout: [1, 2, 3, 4] items per row = 10 total
   // Always create full pyramid structure, filling from bottom up
   const pyramidRows: (Entity | null)[][] = [
     [],  // Row 1: 1 item
     [],  // Row 2: 2 items
     [],  // Row 3: 3 items
     [],  // Row 4: 4 items
-    [],  // Row 5: 5 items
   ];
   
-  const rowSizes = [1, 2, 3, 4, 5];
+  const rowSizes = [1, 2, 3, 4];
   
   // Fill from BEGINNING (most headlines) and place them in BOTTOM rows
   // Row 0 = top (1 item), Row 4 = bottom (5 items)

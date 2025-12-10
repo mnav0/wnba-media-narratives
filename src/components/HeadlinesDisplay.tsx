@@ -31,14 +31,6 @@ export default function HeadlinesDisplay({
   headlineIds,
   isGameView = false
 }: HeadlinesDisplayProps) {
-  // Helper function to format source names
-  const formatSource = (source: string): string => {
-    return source
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  };
-
   // Helper function to get game headline count by matching dates
   const getGameHeadlineCount = (headline: Headline): number | null => {
     if (!gameHeadlineCounts || !headline.datetime) return null;
@@ -90,7 +82,7 @@ export default function HeadlinesDisplay({
       return {
         ...headline,
         fontSize,
-        formattedSource: formatSource(headline.source)
+        source: headline.source
       };
     });
     
@@ -124,8 +116,8 @@ export default function HeadlinesDisplay({
               )}
               
               <div className="flex flex-wrap gap-2 text-xs text-black/50 mt-2">
-                {item.formattedSource && (
-                  <span className="font-medium">{item.formattedSource}</span>
+                {item.source && (
+                  <span className="font-medium">{item.source}</span>
                 )}
                 {item.datetime && (
                   <span>{new Date(item.datetime).toLocaleDateString()}</span>
