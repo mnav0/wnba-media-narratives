@@ -5,7 +5,7 @@ import EntityList from '@/src/components/EntityList';
 import HeadlinesDisplay from '@/src/components/HeadlinesDisplay';
 import VideosDisplay from '@/src/components/VideosDisplay';
 import { useState as useReactState } from 'react';
-import { Entity, Headline, VideoData, FoulType } from '@/src/types';
+import { Entity, Headline, VideoData, FoulType, Video } from '@/src/types';
 import { analyzeHeadlines, TextAnalysisResult } from '@/src/lib/textAnalysis';
 
 interface PlayerViewProps {
@@ -14,6 +14,8 @@ interface PlayerViewProps {
   headlinesArray: [number, Headline][];
   gameVideosMap: Record<string, VideoData>;
   playerVideosMap: Record<string, VideoData>;
+  playerFoulVideosMap: Record<string, Video[]>;
+  gameFoulVideosMap: Record<string, Video[]>;
   gameHeadlineCounts: Record<string, number>;
   playerHeadlineCounts: Record<string, number>;
   physicalityStatsMap: Record<string, any>;
@@ -24,9 +26,9 @@ export default function PlayerView(props: PlayerViewProps) {
   const {
     playerEntities, 
     gameEntities, 
-    headlinesArray, 
-    gameVideosMap, 
-    playerVideosMap,
+    headlinesArray,
+    playerFoulVideosMap,
+    gameFoulVideosMap,
     gameHeadlineCounts,
     playerHeadlineCounts,
     physicalityStatsMap,
@@ -111,13 +113,15 @@ export default function PlayerView(props: PlayerViewProps) {
     setHeadlineIds(validIds);
     setFilteredHeadlineIds(validIds);
     
-    // Load video data based on entity type
-    if (entity.gameId) {
-      const videos = gameVideosMap[entity.gameId] || null;
-      setVideoData(videos);
+    // Load video data based on view mode
+    if (viewMode === 'players' && entity.playerId) {
+      const videos = playerFoulVideosMap[entity.playerId] || [];
+      setVideoData({ videos, videoCount: videos.length });
+    } else if (viewMode === 'games' && entity.gameId) {
+      const videos = gameFoulVideosMap[entity.gameId] || [];
+      setVideoData({ videos, videoCount: videos.length });
     } else {
-      const videos = playerVideosMap[entity.name] || null;
-      setVideoData(videos);
+      setVideoData(null);
     }
   };
 
@@ -392,63 +396,62 @@ export default function PlayerView(props: PlayerViewProps) {
             </>
           ) : (
             <div>
-              {(viewMode === 'players' && 
-                <div className="flex flex-col md:flex-row md:items-center gap-2 py-4 px-4 md:px-8 border-b border-black">
-                  <label htmlFor="stat-select" className="text-sm">
-                    {(() => {
-                      if (selectedEntity) {
-                        const playerEntry = Object.values(physicalityStatsMap).find((s: any) => (s as any).name && (s as any).name.toLowerCase() === selectedEntity.name.toLowerCase()) as any;
-                        if (playerEntry && playerEntry[selectedStat] !== null) {
-                          const value = playerEntry[selectedStat] as number;
-                          return (
-                            <> averages
-                            <span className="ml-2 text-sm font-semibold">{value.toFixed(5)}
-                            </span>
-                            </>
-                          );
-                        }
-                      }
-                      return null;
-                    })()}
-                  </label>
-                  <select
-                    id="stat-select"
-                    value={selectedStat}
-                    onChange={e => setSelectedStat(e.target.value as FoulType)}
-                    className="border border-black rounded px-2 py-1 text-sm"
-                  >
-                    <option value="personal">personal fouls</option>
-                    <option value="flagrant">flagrant fouls</option>
-                    <option value="technical">technical fouls</option>
-                    <option value="drawn">fouls drawn</option>
-                  </select>
+              <div className="flex flex-col md:flex-row md:items-center gap-2 py-4 px-4 md:px-8 border-b border-black">
+                <label htmlFor="stat-select" className="text-sm">
                   {(() => {
-                    if (viewMode === 'players' && selectedEntity) {
-                      // Try to match by name (case-insensitive)
+                    if (selectedEntity) {
                       const playerEntry = Object.values(physicalityStatsMap).find((s: any) => (s as any).name && (s as any).name.toLowerCase() === selectedEntity.name.toLowerCase()) as any;
                       if (playerEntry && playerEntry[selectedStat] !== null) {
                         const value = playerEntry[selectedStat] as number;
-                        const rankings = physicalityRankingsMap[selectedStat] as any[];
-                        const playerRank = rankings.find((r: any) => r.id === playerEntry.id);
                         return (
-                          <span className="text-sm text-black/80"> per minute played.
-                            {playerRank && value > 0 && (
-                              <span className="ml-2">That's <span className="font-bold">{playerRank.rank}{getPlayerRankSuffix(playerRank.rank)}</span> in the league.</span>
-                            )}
+                          <> averages
+                          <span className="ml-2 text-sm font-semibold">{value.toFixed(5)}
                           </span>
+                          </>
                         );
-                      } 
+                      }
                     }
                     return null;
                   })()}
-                </div>
-              )}
+                </label>
+                <select
+                  id="stat-select"
+                  value={selectedStat}
+                  onChange={e => setSelectedStat(e.target.value as FoulType)}
+                  className="border border-black rounded px-2 py-1 text-sm"
+                >
+                  <option value="personal">personal fouls</option>
+                  <option value="flagrant">flagrant fouls</option>
+                  <option value="technical">technical fouls</option>
+                  {(viewMode === 'players') && <option value="drawn">fouls drawn</option>}
+                </select>
+                {(() => {
+                  if (viewMode === 'players' && selectedEntity) {
+                    // Try to match by name (case-insensitive)
+                    const playerEntry = Object.values(physicalityStatsMap).find((s: any) => (s as any).name && (s as any).name.toLowerCase() === selectedEntity.name.toLowerCase()) as any;
+                    if (playerEntry && playerEntry[selectedStat] !== null) {
+                      const value = playerEntry[selectedStat] as number;
+                      const rankings = physicalityRankingsMap[selectedStat] as any[];
+                      const playerRank = rankings.find((r: any) => r.id === playerEntry.id);
+                      return (
+                        <span className="text-sm text-black/80"> per minute played.
+                          {playerRank && value > 0 && (
+                            <span className="ml-2">That's <span className="font-bold">{playerRank.rank}{getPlayerRankSuffix(playerRank.rank)}</span> in the league.</span>
+                          )}
+                        </span>
+                      );
+                    } 
+                  }
+                  return null;
+                })()}
+              </div>
               <VideosDisplay
                 videoData={videoData}
                 entityName={selectedEntity.name}
                 viewType={viewMode === 'players' ? 'player' : 'game'}
                 gameHeadlineCounts={gameHeadlineCounts}
                 playerHeadlineCounts={playerHeadlineCounts}
+                foulType={selectedStat}
               />
             </div>
           )}

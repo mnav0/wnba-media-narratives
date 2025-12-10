@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
-import { Entity, Headline, PhysicalityStat, PhysicalityStatsByPlayer, FoulType, VideoData } from '@/src/types';
+import { Entity, Headline, PhysicalityStat, PhysicalityStatsByPlayer, FoulType, VideoData, Video } from '@/src/types';
 
 export function getPlayerEntities(): Entity[] {
   const csvPath = path.join(process.cwd(), 'src', 'data', 'player-headlines.csv');
@@ -16,7 +16,8 @@ export function getPlayerEntities(): Entity[] {
   const entities: Entity[] = records.map((record: any) => {
     // Parse the matched_headlines array - it's a JSON array string
     const matchedHeadlines = JSON.parse(record.matched_headlines);
-    return {
+      return {
+        playerId: record.id, // Set playerId from record.id
       name: record.full_name,
       headlineCount: matchedHeadlines.length,
       matchedHeadlines: matchedHeadlines
@@ -284,6 +285,78 @@ function parsePhysicalityCSVData(records: any[], year: '2024' | '2025'): Record<
     result[id] = { name, stats };
   }
   return result;
+}
+
+function parseFoulVideosFromRow(row: Record<string, any>): Video[] {
+  const gameId = row.game_id;
+  const playerId = row.player_id;
+  const videos: Video[] = [];
+  function addVideos(col: string, type: FoulType) {
+    let arr = row[col];
+    if (typeof arr === 'string') {
+      arr = arr.replace(/'/g, '"');
+      try {
+        arr = JSON.parse(arr);
+      } catch {
+        arr = [];
+      }
+    }
+    if (Array.isArray(arr)) {
+      arr.forEach((url: string) => {
+        if (url && url.startsWith('http')) {
+          videos.push({
+            videoUrl: url,
+            playDescription: '',
+            gameId,
+            playerId,
+            foulType: type
+          });
+        }
+      });
+    }
+  }
+  addVideos('personal_videos', 'personal');
+  addVideos('flagrant_videos', 'flagrant');
+  addVideos('technical_videos', 'technical');
+  return videos;
+}
+
+export function getPlayerFoulVideosMap(): Record<string, Video[]> {
+  const csvPath = path.join(process.cwd(), 'src', 'data', 'player-game-foul-videos.csv');
+  const csvContent = fs.readFileSync(csvPath, 'utf-8');
+  const records = parse(csvContent, {
+    columns: true,
+    skip_empty_lines: true,
+    relax_column_count: true
+  });
+  const playerMap: Record<string, Video[]> = {};
+  for (const rowAny of records) {
+    const row = rowAny as Record<string, any>;
+    const playerId = row.player_id;
+    const videos = parseFoulVideosFromRow(row);
+    if (!playerMap[playerId]) playerMap[playerId] = [];
+    playerMap[playerId] = playerMap[playerId].concat(videos);
+  }
+  return playerMap;
+}
+
+export function getGameFoulVideosMap(): Record<string, Video[]> {
+  const csvPath = path.join(process.cwd(), 'src', 'data', 'player-game-foul-videos.csv');
+  const csvContent = fs.readFileSync(csvPath, 'utf-8');
+  const records = parse(csvContent, {
+    columns: true,
+    skip_empty_lines: true,
+    relax_column_count: true
+  });
+  const gameMap: Record<string, Video[]> = {};
+  for (const rowAny of records) {
+    const row = rowAny as Record<string, any>;
+    const gameId = row.game_id;
+    const videos = parseFoulVideosFromRow(row);
+    if (!gameMap[gameId]) gameMap[gameId] = [];
+    gameMap[gameId] = gameMap[gameId].concat(videos);
+  }
+  return gameMap;
 }
 
 export function getMergedPhysicalityStats(): PhysicalityStatsByPlayer {

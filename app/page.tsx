@@ -8,7 +8,9 @@ import {
   getGameHeadlineCounts,
   getPlayerHeadlineCounts,
   getMergedPhysicalityStats,
-  getPhysicalityRankings
+  getPhysicalityRankings,
+  getPlayerFoulVideosMap,
+  getGameFoulVideosMap
 } from '@/src/lib/data';
 import { VideoData } from '@/src/types';
 
@@ -49,12 +51,9 @@ export default function Home() {
     drawn: getPhysicalityRankings('drawn'),
   };
 
-  const physicalityStatMeta = {
-    personal: { label: 'personal fouls', per: 'minute played' },
-    flagrant: { label: 'flagrant fouls', per: 'minute played' },
-    technical: { label: 'technical fouls', per: 'minute played' },
-    drawn: { label: 'fouls drawn', per: 'minute played' },
-  };
+  // Pre-load player and game foul videos maps
+  const playerFoulVideosMap = getPlayerFoulVideosMap();
+  const gameFoulVideosMap = getGameFoulVideosMap();
   
   // Load headline count maps for video scaling
   const gameHeadlineCounts = getGameHeadlineCounts();
@@ -73,6 +72,8 @@ export default function Home() {
           headlinesArray={headlinesArray}
           gameVideosMap={gameVideosMap}
           playerVideosMap={playerVideosMap}
+          playerFoulVideosMap={playerFoulVideosMap}
+          gameFoulVideosMap={gameFoulVideosMap}
           gameHeadlineCounts={gameHeadlineCountsObj}
           playerHeadlineCounts={playerHeadlineCountsObj}
           physicalityStatsMap={physicalityStatsMap}

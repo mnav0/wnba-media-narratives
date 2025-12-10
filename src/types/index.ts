@@ -19,6 +19,7 @@ export interface Entity {
   name: string;
   headlineCount: number;
   matchedHeadlines: number[];
+  playerId?: string; // Added playerId to the Entity interface
   // Optional game-specific fields
   homeTeam?: string;
   awayTeam?: string;
@@ -63,6 +64,7 @@ export interface Video {
   playDescription: string;
   gameId: string;
   playerId?: string;
+  foulType?: FoulType;
 }
 
 export interface VideoData {
