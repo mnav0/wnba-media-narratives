@@ -38,7 +38,7 @@ export interface Game {
   headlineCount: number;
 }
 
-export type FoulType = 'technical' | 'flagrant' | 'regular';
+export type FoulType = 'technical' | 'flagrant' | 'personal' | 'drawn';
 
 export interface Play {
   eventNum: string;
@@ -68,4 +68,17 @@ export interface Video {
 export interface VideoData {
   videos: Video[];
   videoCount: number;
+}
+
+export interface PhysicalityStat {
+  id: string;
+  name: string;
+  personal: number | null;
+  flagrant: number | null;
+  technical: number | null;
+  drawn: number | null;
+}
+
+export interface PhysicalityStatsByPlayer {
+  [id: string]: PhysicalityStat;
 }

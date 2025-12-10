@@ -3,9 +3,9 @@
 import { useState, useMemo } from 'react';
 import EntityList from '@/src/components/EntityList';
 import HeadlinesDisplay from '@/src/components/HeadlinesDisplay';
-import GameView from '@/src/components/GameView';
 import VideosDisplay from '@/src/components/VideosDisplay';
-import { Entity, Headline, VideoData } from '@/src/types';
+import { useState as useReactState } from 'react';
+import { Entity, Headline, VideoData, FoulType } from '@/src/types';
 import { analyzeHeadlines, TextAnalysisResult } from '@/src/lib/textAnalysis';
 
 interface PlayerViewProps {
@@ -16,17 +16,22 @@ interface PlayerViewProps {
   playerVideosMap: Record<string, VideoData>;
   gameHeadlineCounts: Record<string, number>;
   playerHeadlineCounts: Record<string, number>;
+  physicalityStatsMap: Record<string, any>;
+  physicalityRankingsMap: Record<string, any[]>;
 }
 
-export default function PlayerView({ 
-  playerEntities, 
-  gameEntities, 
-  headlinesArray, 
-  gameVideosMap, 
-  playerVideosMap,
-  gameHeadlineCounts,
-  playerHeadlineCounts
-}: PlayerViewProps) {
+export default function PlayerView(props: PlayerViewProps) {
+  const {
+    playerEntities, 
+    gameEntities, 
+    headlinesArray, 
+    gameVideosMap, 
+    playerVideosMap,
+    gameHeadlineCounts,
+    playerHeadlineCounts,
+    physicalityStatsMap,
+    physicalityRankingsMap
+  } = props;
   const [viewMode, setViewMode] = useState<'players' | 'games'>('players');
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [allEntityHeadlines, setAllEntityHeadlines] = useState<Headline[]>([]);
@@ -35,6 +40,8 @@ export default function PlayerView({
   const [filteredHeadlineIds, setFilteredHeadlineIds] = useState<number[]>([]);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'headlines' | 'videos'>('headlines');
+  // For physicality stat dropdown in videos tab
+  const [selectedStat, setSelectedStat] = useReactState<FoulType>('personal');
   const [videoData, setVideoData] = useState<VideoData | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   
@@ -62,8 +69,8 @@ export default function PlayerView({
   // For game views, we want to scale headlines by the prominence of associated players
   const headlineToPlayerCounts = useMemo(() => {
     const map: Record<number, number> = {};
-    playerEntities.forEach(player => {
-      player.matchedHeadlines.forEach(headlineId => {
+    playerEntities.forEach((player) => {
+      player.matchedHeadlines.forEach((headlineId: number) => {
         // Store the max player headline count for each headline
         if (!map[headlineId] || player.headlineCount > map[headlineId]) {
           map[headlineId] = player.headlineCount;
@@ -91,7 +98,7 @@ export default function PlayerView({
     const validHeadlines: Headline[] = [];
     const validIds: number[] = [];
     
-    entity.matchedHeadlines.forEach(id => {
+    entity.matchedHeadlines.forEach((id: number) => {
       const headline = allHeadlines.get(id);
       if (headline) {
         validHeadlines.push(headline);
@@ -137,6 +144,12 @@ export default function PlayerView({
       setFilteredHeadlines(filtered);
       setFilteredHeadlineIds(filteredIds);
     }
+  };
+
+  const getPlayerRankSuffix = (rank: number): string => {
+    const s = ["th", "st", "nd", "rd"];
+    const v = rank % 100;
+    return (s[(v - 20) % 10] || s[v] || s[0]);
   };
 
   const handleClose = () => {
@@ -378,13 +391,66 @@ export default function PlayerView({
               />
             </>
           ) : (
-            <VideosDisplay
-              videoData={videoData}
-              entityName={selectedEntity.name}
-              viewType={viewMode === 'players' ? 'player' : 'game'}
-              gameHeadlineCounts={gameHeadlineCounts}
-              playerHeadlineCounts={playerHeadlineCounts}
-            />
+            <div>
+              {(viewMode === 'players' && 
+                <div className="flex flex-col md:flex-row md:items-center gap-2 py-4 px-4 md:px-8 border-b border-black">
+                  <label htmlFor="stat-select" className="text-sm">
+                    {(() => {
+                      if (selectedEntity) {
+                        const playerEntry = Object.values(physicalityStatsMap).find((s: any) => (s as any).name && (s as any).name.toLowerCase() === selectedEntity.name.toLowerCase()) as any;
+                        if (playerEntry && playerEntry[selectedStat] !== null) {
+                          const value = playerEntry[selectedStat] as number;
+                          return (
+                            <> averages
+                            <span className="ml-2 text-sm font-semibold">{value.toFixed(5)}
+                            </span>
+                            </>
+                          );
+                        }
+                      }
+                      return null;
+                    })()}
+                  </label>
+                  <select
+                    id="stat-select"
+                    value={selectedStat}
+                    onChange={e => setSelectedStat(e.target.value as FoulType)}
+                    className="border border-black rounded px-2 py-1 text-sm"
+                  >
+                    <option value="personal">personal fouls</option>
+                    <option value="flagrant">flagrant fouls</option>
+                    <option value="technical">technical fouls</option>
+                    <option value="drawn">fouls drawn</option>
+                  </select>
+                  {(() => {
+                    if (viewMode === 'players' && selectedEntity) {
+                      // Try to match by name (case-insensitive)
+                      const playerEntry = Object.values(physicalityStatsMap).find((s: any) => (s as any).name && (s as any).name.toLowerCase() === selectedEntity.name.toLowerCase()) as any;
+                      if (playerEntry && playerEntry[selectedStat] !== null) {
+                        const value = playerEntry[selectedStat] as number;
+                        const rankings = physicalityRankingsMap[selectedStat] as any[];
+                        const playerRank = rankings.find((r: any) => r.id === playerEntry.id);
+                        return (
+                          <span className="text-sm text-black/80"> per minute played.
+                            {playerRank && value > 0 && (
+                              <span className="ml-2">That's <span className="font-bold">{playerRank.rank}{getPlayerRankSuffix(playerRank.rank)}</span> in the league.</span>
+                            )}
+                          </span>
+                        );
+                      } 
+                    }
+                    return null;
+                  })()}
+                </div>
+              )}
+              <VideosDisplay
+                videoData={videoData}
+                entityName={selectedEntity.name}
+                viewType={viewMode === 'players' ? 'player' : 'game'}
+                gameHeadlineCounts={gameHeadlineCounts}
+                playerHeadlineCounts={playerHeadlineCounts}
+              />
+            </div>
           )}
         </div>
       ) : (

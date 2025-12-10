@@ -6,7 +6,9 @@ import {
   getGameVideos, 
   getPlayerVideos,
   getGameHeadlineCounts,
-  getPlayerHeadlineCounts
+  getPlayerHeadlineCounts,
+  getMergedPhysicalityStats,
+  getPhysicalityRankings
 } from '@/src/lib/data';
 import { VideoData } from '@/src/types';
 
@@ -38,6 +40,22 @@ export default function Home() {
     }
   });
   
+  // Build physicality stats map and rankings map for all stat types
+  const physicalityStatsMap = getMergedPhysicalityStats();
+  const physicalityRankingsMap: Record<string, any[]> = {
+    personal: getPhysicalityRankings('personal'),
+    flagrant: getPhysicalityRankings('flagrant'),
+    technical: getPhysicalityRankings('technical'),
+    drawn: getPhysicalityRankings('drawn'),
+  };
+
+  const physicalityStatMeta = {
+    personal: { label: 'personal fouls', per: 'minute played' },
+    flagrant: { label: 'flagrant fouls', per: 'minute played' },
+    technical: { label: 'technical fouls', per: 'minute played' },
+    drawn: { label: 'fouls drawn', per: 'minute played' },
+  };
+  
   // Load headline count maps for video scaling
   const gameHeadlineCounts = getGameHeadlineCounts();
   const playerHeadlineCounts = getPlayerHeadlineCounts();
@@ -57,6 +75,8 @@ export default function Home() {
           playerVideosMap={playerVideosMap}
           gameHeadlineCounts={gameHeadlineCountsObj}
           playerHeadlineCounts={playerHeadlineCountsObj}
+          physicalityStatsMap={physicalityStatsMap}
+          physicalityRankingsMap={physicalityRankingsMap}
         />
       </main>
     </div>

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
-import { Entity, Headline, Game, VideoData } from '@/src/types';
+import { Entity, Headline, PhysicalityStat, PhysicalityStatsByPlayer, FoulType, VideoData } from '@/src/types';
 
 export function getPlayerEntities(): Entity[] {
   const csvPath = path.join(process.cwd(), 'src', 'data', 'player-headlines.csv');
@@ -16,7 +16,6 @@ export function getPlayerEntities(): Entity[] {
   const entities: Entity[] = records.map((record: any) => {
     // Parse the matched_headlines array - it's a JSON array string
     const matchedHeadlines = JSON.parse(record.matched_headlines);
-    
     return {
       name: record.full_name,
       headlineCount: matchedHeadlines.length,
@@ -269,3 +268,63 @@ export function getPlayerHeadlineCounts(): Map<string, number> {
     return new Map();
   }
 }
+
+
+function parsePhysicalityCSVData(records: any[], year: '2024' | '2025'): Record<string, { name: string; stats: Record<FoulType, number> }> {
+  const result: Record<string, { name: string; stats: Record<FoulType, number> }> = {};
+  for (const row of records) {
+    const id = row.id;
+    const name = row.Player || '';
+    const stats: Record<FoulType, number> = {
+      personal: parseFloat(row['Personals/MP'] || row['FoulsCommitted_PerMinPlayed'] || '0') || 0,
+      flagrant: parseFloat(row['Flagrants/MP'] || row['Flagrants'] || '0') || 0,
+      technical: parseFloat(row['Technicals/MP'] || row['Technicals'] || '0') || 0,
+      drawn: parseFloat(row['Personals_Drawn/MP'] || row['FoulsDrawn_PerMinPlayed'] || '0') || 0,
+    };
+    result[id] = { name, stats };
+  }
+  return result;
+}
+
+export function getMergedPhysicalityStats(): PhysicalityStatsByPlayer {
+  const csvPath2024 = path.join(process.cwd(), 'src', 'data', 'physicality-2024.csv');
+  const csvPath2025 = path.join(process.cwd(), 'src', 'data', 'physicality-2025.csv');
+  const content2024 = fs.readFileSync(csvPath2024, 'utf-8');
+  const content2025 = fs.readFileSync(csvPath2025, 'utf-8');
+  const records2024 = parse(content2024, { columns: true, skip_empty_lines: true });
+  const records2025 = parse(content2025, { columns: true, skip_empty_lines: true });
+  const y2024 = parsePhysicalityCSVData(records2024, '2024');
+  const y2025 = parsePhysicalityCSVData(records2025, '2025');
+  const allIds = new Set([...Object.keys(y2024), ...Object.keys(y2025)]);
+  const merged: PhysicalityStatsByPlayer = {};
+  for (const id of allIds) {
+    const name = y2025[id]?.name || y2024[id]?.name || '';
+    const statTypes: FoulType[] = ['personal', 'flagrant', 'technical', 'drawn'];
+    const stat: PhysicalityStat = { id, name, personal: null, flagrant: null, technical: null, drawn: null };
+    for (const type of statTypes) {
+      const v1 = y2024[id]?.stats[type];
+      const v2 = y2025[id]?.stats[type];
+      if (v1 !== undefined && v2 !== undefined) stat[type] = (v1 + v2) / 2;
+      else if (v1 !== undefined) stat[type] = v1;
+      else if (v2 !== undefined) stat[type] = v2;
+    }
+    merged[id] = stat;
+  }
+  return merged;
+}
+
+export function getPhysicalityRankings(type: FoulType): { id: string; value: number; rank: number }[] {
+  const stats = getMergedPhysicalityStats();
+  const arr = Object.values(stats)
+    .filter(s => typeof s[type] === 'number' && s[type] !== null)
+    .map(s => ({ id: s.id, value: s[type] as number }));
+  arr.sort((a, b) => b.value - a.value); // higher is better
+  return arr.map((item, idx) => ({ ...item, rank: idx + 1 }));
+}
+
+const statMap: Record<FoulType, { label: string; per: string }> = {
+  personal: { label: 'personal fouls', per: 'minute played' },
+  flagrant: { label: 'flagrant fouls', per: 'minute played' },
+  technical: { label: 'technical fouls', per: 'minute played' },
+  drawn: { label: 'fouls drawn', per: 'minute played' },
+};
