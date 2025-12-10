@@ -2,27 +2,6 @@
 
 An interactive visualization of media coverage patterns for WNBA players and teams.
 
-## Project Structure
-
-```
-├── app/
-│   ├── page.tsx          # Main server-side page
-│   ├── layout.tsx        # Root layout with metadata
-│   └── globals.css       # Global styles
-├── src/
-│   ├── components/
-│   │   ├── EntityList.tsx        # Reusable component for displaying players/teams
-│   │   ├── HeadlinesDisplay.tsx  # Full-screen headline viewer
-│   │   └── PlayerView.tsx        # Client-side state management
-│   ├── data/
-│   │   ├── player-headlines.csv  # Player data with headline IDs
-│   │   ├── all-headlines.csv     # Complete headline database
-│   │   └── teams_*.csv           # Team data (for future use)
-│   ├── lib/
-│   │   ├── data.ts               # CSV data loading (uses csv-parse library)
-│   │   └── textAnalysis.ts       # NLP analysis with RiTa and sentiment analysis
-│   └── types/
-│       └── index.ts              # TypeScript type definitions
 ```
 
 ## Getting Started

@@ -102,65 +102,6 @@ export function getGameEntities(): Entity[] {
   return entities;
 }
 
-export function getGameVideos(gameId: string): VideoData | null {
-  const csvPath = path.join(process.cwd(), 'src', 'data', 'game-videos.csv');
-  
-  try {
-    const csvContent = fs.readFileSync(csvPath, 'utf-8');
-    const records = parse(csvContent, {
-      columns: true,
-      skip_empty_lines: true,
-      relax_column_count: true
-    }) as any[];
-    
-    // Find the record for this game
-    const gameRecord: any = records.find((record: any) => record.game_id === gameId);
-    
-    if (!gameRecord || !gameRecord.players) {
-      return null;
-    }
-    
-    // Parse the nested players dictionary from the CSV
-    // Format: {player_id: [video_urls]} - Python dict syntax
-    // Remove outer quotes that CSV parser may include
-    let playersString = gameRecord.players;
-    if (playersString.startsWith('"') && playersString.endsWith('"')) {
-      playersString = playersString.slice(1, -1);
-    }
-    
-    // Convert Python dict syntax to JSON:
-    // 1. Replace single quotes with double quotes
-    // 2. Add quotes around numeric keys
-    playersString = playersString
-      .replace(/'/g, '"')
-      .replace(/(\{|,\s*)(\d+):/g, '$1"$2":');
-    
-    const playersData = JSON.parse(playersString);
-    
-    // Extract all videos with their player IDs
-    const videos: any[] = [];
-    
-    Object.entries(playersData).forEach(([playerId, videoUrls]: [string, any]) => {
-      (videoUrls as string[]).forEach((url: string) => {
-        videos.push({
-          videoUrl: url,
-          playDescription: '', // Game videos don't have play descriptions in the CSV
-          gameId: gameId,
-          playerId: playerId
-        });
-      });
-    });
-    
-    return {
-      videos,
-      videoCount: videos.length
-    };
-  } catch (error) {
-    // Silently return null for games without videos - this is expected
-    return null;
-  }
-}
-
 export function getPlayerVideos(playerName: string): VideoData | null {
   const csvPath = path.join(process.cwd(), 'src', 'data', 'player-videos.csv');
   

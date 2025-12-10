@@ -32,7 +32,7 @@ export default function VideosDisplay({
           <p className="text-lg">
             {foulType === 'drawn'
               ? 'Select another type to see foul videos.'
-              : `No ${foulType} foul videos available for ${entityName}.`}
+              : 'No videos available'}
           </p>
         </div>
       </div>

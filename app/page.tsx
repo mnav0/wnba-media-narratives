@@ -3,7 +3,6 @@ import {
   getPlayerEntities, 
   getGameEntities, 
   getAllHeadlines, 
-  getGameVideos, 
   getPlayerVideos,
   getGameHeadlineCounts,
   getPlayerHeadlineCounts,
@@ -21,17 +20,6 @@ export default function Home() {
   
   // Convert Map to array for serialization
   const headlinesArray = Array.from(allHeadlines.entries());
-  
-  // Pre-load game videos data for all games
-  const gameVideosMap: Record<string, VideoData> = {};
-  gameEntities.forEach(game => {
-    if (game.gameId) {
-      const videosData = getGameVideos(game.gameId);
-      if (videosData) {
-        gameVideosMap[game.gameId] = videosData;
-      }
-    }
-  });
   
   // Pre-load player videos data for all players
   const playerVideosMap: Record<string, VideoData> = {};
@@ -70,7 +58,6 @@ export default function Home() {
           playerEntities={playerEntities} 
           gameEntities={gameEntities}
           headlinesArray={headlinesArray}
-          gameVideosMap={gameVideosMap}
           playerVideosMap={playerVideosMap}
           playerFoulVideosMap={playerFoulVideosMap}
           gameFoulVideosMap={gameFoulVideosMap}

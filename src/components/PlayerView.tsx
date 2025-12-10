@@ -12,7 +12,6 @@ interface PlayerViewProps {
   playerEntities: Entity[];
   gameEntities: Entity[];
   headlinesArray: [number, Headline][];
-  gameVideosMap: Record<string, VideoData>;
   playerVideosMap: Record<string, VideoData>;
   playerFoulVideosMap: Record<string, Video[]>;
   gameFoulVideosMap: Record<string, Video[]>;
